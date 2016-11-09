@@ -1,3 +1,6 @@
+<?php
+
+
 $members=<<<TEXT
 
 Name               E-Mail Address
@@ -7,6 +10,8 @@ Donkey K. Gorilla  kong@banana.example.com
 Mario A. Plumber   mario@franchise.example.org
 Bentley T. Bear    bb@xtal-castles.example.net
 TEXT;
+
+// echo "$mumbers <br>\n";
 
 print preg_replace('/[^@\s]+@([-a-z0-9]+\.)+[a-z]{2,}/',
                    '[ address removed ]', $members);
