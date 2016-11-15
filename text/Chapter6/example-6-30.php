@@ -1,4 +1,8 @@
 <?php
+//29(formhelpers)を読み込む
+require_once('formhelpers.php');
+
+
 // setup the arrays of choices in the select menus
 // these are needed in display_form(), validate_form(),
 // and process_form(), so they are declared in the global scope
@@ -11,13 +15,13 @@ $main_dishes = array('cuke' => 'Braised Sea Cucumber',
                      'stomach' => "Sauteed Pig's Stomach",
                      'tripe' => 'Sauteed Tripe with Wine Sauce',
                      'taro' => 'Stewed Pork with Taro',
-                     'giblets' => 'Baked Giblets with Salt', 
+                     'giblets' => 'Baked Giblets with Salt',
                      'abalone' => 'Abalone with Marrow and Duck Feet');
 
 // The main page logic:
 // - If the form is submitted, validate and then process or redisplay
 // - If it's not submitted, display
-if ($_POST['_submit_check']) {
+if (array_key_exists('_submit_check', $_POST)) {
     // If validate_form() returns errors, pass them to show_form()
     if ($form_errors = validate_form()) {
         show_form($form_errors);
@@ -32,17 +36,21 @@ if ($_POST['_submit_check']) {
 
 function show_form($errors = '') {
     // If the form is submitted, get defaults from submitted parameters
-    if ($_POST['_submit_check']) {
+    if (array_key_exists('_submit_check', $_POST)) {
         $defaults = $_POST;
     } else {
         // Otherwise, set our own defaults: medium size and yes to delivery
-        $defaults = array('delivery' => 'yes',
-                          'size'     => 'medium');
+        $defaults = array('name'      => '',
+                          'sweet'     => '',
+                          'main_dish' => array(),
+                          'delivery'  => 'yes',
+                          'size'      => 'medium',
+                          'comments'    => '', );
     }
-    
+
     // If errors were passed in, put them in $error_text (with HTML markup)
     if ($errors) {
-        $error_text = '<tr><td>You need to correct the following errors:';
+        $error_text = '<tr><td><b><font color="red">You need to correct the following errors:</font></b>';
         $error_text .= '</td><td><ul><li>';
         $error_text .= implode('</li><li>',$errors);
         $error_text .= '</li></ul></td></tr>';
@@ -109,19 +117,25 @@ function validate_form() {
         $errors[] = 'Please select a valid sweet item.';
     }
     // exactly two main dishes required
-    if (count($_POST['main_dish']) != 2) {
+    if (array_key_exists('main_dish', $_POST)) {
+      if (count($_POST['main_dish']) != 2) {
         $errors[] = 'Please select exactly two main dishes.';
-    } else {
-        // We know there are two main dishes selected, so make sure they are 
+      } else {
+        // We know there are two main dishes selected, so make sure they are
         // both valid
         if (! (array_key_exists($_POST['main_dish'][0], $GLOBALS['main_dishes']) &&
-               array_key_exists($_POST['main_dish'][1], $GLOBALS['main_dishes']))) {
+            array_key_exists($_POST['main_dish'][1], $GLOBALS['main_dishes']))) {
             $errors[] = 'Please select exactly two valid main dishes.';
         }
+      }
+    } else {
+      $errors[] = 'Please select exactly two main dishes.';
     }
     // if delivery is checked, then comments must contain something
-    if (($_POST['delivery'] == 'yes') && (! strlen(trim($_POST['comments'])))) {
-        $errors[] = 'Please enter your address for delivery.';
+    if (array_key_exists('delivery', $_POST)) {
+      if (($_POST['delivery'] == 'yes') && (! strlen(trim($_POST['comments'])))) {
+          $errors[] = 'Please enter your address for delivery.';
+      }
     }
 
     return $errors;
@@ -133,7 +147,8 @@ function process_form() {
     $sweet = $GLOBALS['sweets'][ $_POST['sweet'] ];
     $main_dish_1 = $GLOBALS['main_dishes'][ $_POST['main_dish'][0] ];
     $main_dish_2 = $GLOBALS['main_dishes'][ $_POST['main_dish'][1] ];
-    if ($_POST['delivery'] == 'yes') {
+    // if ($_POST['delivery'] == 'yes') {
+    if (array_key_exists('delivery', $_POST)) {
         $delivery = 'do';
     } else {
         $delivery = 'do not';
@@ -141,7 +156,7 @@ function process_form() {
     // build up the text of the order message
     $message=<<<_ORDER_
 Thank you for your order, $_POST[name].
-You requested the $_POST[size] size of $sweet, $main_dish_1, and $main_dish_2.
+You requested the "$_POST[size] size" of "$sweet", "$main_dish_1", and "$main_dish_2".
 You $delivery want delivery.
 _ORDER_;
     if (strlen(trim($_POST['comments']))) {

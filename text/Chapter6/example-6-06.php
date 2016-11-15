@@ -1,6 +1,11 @@
-// Logic to do the right thing based on 
+<?php
+
+// Logic to do the right thing based on
 // the submitted form parameters
-if (array_key_exists('my_name',$_POST) {
+//$_POSTにキーが存在すればポストされているので、prosess_form()
+//$_POSTにキーが存在しなければ、show_form() を呼ぶ
+//
+if (array_key_exists('my_name',$_POST)) {
     process_form();
 } else {
     show_form();

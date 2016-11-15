@@ -1,4 +1,6 @@
-<form method="POST" action="catalog.php">
+
+<!-- action="<?php echo $_SERVER['SCRIPT_NAME']?>" で自分自身を呼ぶ -->
+<form method="POST" action="<?php echo $_SERVER['SCRIPT_NAME']?>">
 <input type="text" name="product_id">
 <select name="category">
 <option value="ovenmitt">Pot Holder</option>
@@ -8,7 +10,12 @@
 <input type="submit" name="submit">
 </form>
 Here are the submitted values:
-
-product_id: <?php print $_POST['product_id']; ?>
 <br/>
-category: <?php print $_POST['category']; ?>
+
+product_id:
+<?php if(isset($_POST['product_id'])) print $_POST['product_id']; ?>
+<br/>
+category:
+<?php if(isset($_POST['category'])) print $_POST['category']; ?>
+
+

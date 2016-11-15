@@ -1,12 +1,17 @@
-// Logic to do the right thing based on 
+<?php
+
+// Logic to do the right thing based on
 // the hidden _submit_check parameter
-if ($_POST['_submit_check']) {
+/*if ($_POST['_submit_check']) {*/
+if (array_key_exists('_submit_check', $_POST)) {
     if (validate_form()) {
         process_form();
     } else {
+        print "<b>more long words.</b><br><br>\n";
         show_form();
     }
 } else {
+    print "<b>more long words!</b><br><br>\n";
     show_form();
 }
 
