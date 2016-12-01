@@ -1,16 +1,22 @@
 <?php
+//mysqliによるDB接続
 
-require 'MDB2.php';
 // Load the form helper functions.
 require '../Chapter6/formhelpers.php';
-$db = MDB2::connect('mysql://miyagi:password@localhost/practice?charset=utf8');
-
-if (MDB2::isError($db)) { die("connection error: " . $db->getMessage()); }
+//domain, username, password, DBname
+$db = mysqli_connect('localhost','miyagi','password','practice');
+if (! $db) { die("Can't connect: " . mysqli_connect_error()); }
 echo "OK<br>\n";
+var_dump($db);
 
-$db->setErrorHandling(PEAR_ERROR_DIE);
-// Set up fetch mode: rows as objects 行をオブジェクトとする
-$db->setFetchMode(MDB2_FETCHMODE_OBJECT);
+//utf-8に変更
+if (!mysqli_set_charset($db, "utf8")) {
+  printf("Error loading character set utf8: %s<br>\n", mysqli_error($db));
+  exit();
+}
+
+
+
 
 // Choices for the "spicy" menu in the form
 $spicy_choices = array('no','yes','either');
@@ -116,21 +122,30 @@ function process_form() {
     // Access the global variable $db inside this function
     global $db;
 
-    // build up the query 問い合わせsql文を制作
-    $sql = 'SELECT dish_name, price, is_spicy FROM dishes WHERE
-            price >= ? AND price <= ?';
+    // build up the query
+    $sql = 'SELECT dish_name, price, is_spicy FROM dishes WHERE ';
+
+    // add the minimum price to the query
+    $sql .= "price >= '" .
+            mysqli_real_escape_string($db, $_POST['min_price']) . "' ";
+
+    // add the maximum price to the query
+    $sql .= " AND price <= '" .
+            mysqli_real_escape_string($db, $_POST['max_price']) . "' ";
 
     // if a dish name was submitted, add to the WHERE clause
-    // we use quoteSmart() and strtr() to prevent user-enter wildcards from working
+    // we use mysqli_real_escape_string() and strtr() to prevent
+    // user-entered wildcards from working
     if (strlen(trim($_POST['dish_name']))) {
-        $dish = $db->quote($_POST['dish_name']);
+        $dish = mysqli_real_escape_string($db, $_POST['dish_name']);
         $dish = strtr($dish, array('_' => '\_', '%' => '\%'));
+        // mysqli_real_escape_string() doesn't add the single quotes
+        // around the value so you have to put those around $dish in
+        // the query:
         //文字列の前後に％を追加
-        $dish = preg_replace('/^\'/', '\'%', $dish);
-        $dish = preg_replace('/\'$/', '%\'', $dish);
-        echo 'preg_replace()';
+        $dish = '%'. $dish. '%';
         var_dump($dish);
-        $sql .= " AND dish_name LIKE $dish";
+        $sql .= " AND dish_name LIKE '$dish'";
     }
 
     // if is_spicy is "yes" or "no", add appropriate SQL
@@ -144,25 +159,24 @@ function process_form() {
 
     // Send the query to the database program and get all the rows back
 
-    //original
-    // $dishes = $db->getAll($sql, array($_POST['min_price'],
-    //                                   $_POST['max_price']));
+    $q = mysqli_query($db, $sql);
+    var_dump($q);
 
-    $sth = $db->prepare($sql);
-    $result = $sth->execute(array($_POST['min_price'], $_POST['max_price']));
-    $dishes = $result->fetchAll();
+    if (!$q) {
+      printf("Error Message: %s<br>\n", mysqli_error($db));
+    }
 
 
-    if (count($dishes) == 0) {
+    if (mysqli_num_rows($q) == 0) {
         print 'No dishes matched.';
     } else {
         print '<table>';
         print '<tr><th>Dish Name</th><th>Price</th><th>Spicy?</th></tr>';
-        foreach ($dishes as $dish) {
+        while ($dish = mysqli_fetch_object($q)) {
             if ($dish->is_spicy == 1) {
-                $spicy = 'Yes(1)';
+                $spicy = 'Yes';
             } else {
-                $spicy = 'No(0)';
+                $spicy = 'No';
             }
             printf('<tr><td>%s</td><td>$%.02f</td><td>%s</td></tr>',
                    htmlentities($dish->dish_name), $dish->price, $spicy);

@@ -1,16 +1,23 @@
 <?php
 
-require 'MDB2.php';
-// Load the form helper functions.
-require '../Chapter6/formhelpers.php';
-$db = MDB2::connect('mysql://miyagi:password@localhost/practice?charset=utf8');
+try {
+  require '../Chapter6/formhelpers.php';
+  $dns = 'mysql:host=localhost;dbname=practice;charset=utf8';
+  $username = 'miyagi';
+  $password = 'password';
+  $db = new PDO($dns, $username, $password);
+  //エラー時に例外を返す
+  $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOexception $e) {
+  var_dump($e);
+}
 
-if (MDB2::isError($db)) { die("connection error: " . $db->getMessage()); }
-echo "OK<br>\n";
+echo "OK!";
+var_dump($db);
 
-$db->setErrorHandling(PEAR_ERROR_DIE);
-// Set up fetch mode: rows as objects 行をオブジェクトとする
-$db->setFetchMode(MDB2_FETCHMODE_OBJECT);
+
+// // Set up fetch mode: rows as objects 行をオブジェクトとする
+// $db->setFetchMode(MDB2_FETCHMODE_OBJECT);
 
 // Choices for the "spicy" menu in the form
 $spicy_choices = array('no','yes','either');
@@ -116,57 +123,68 @@ function process_form() {
     // Access the global variable $db inside this function
     global $db;
 
-    // build up the query 問い合わせsql文を制作
-    $sql = 'SELECT dish_name, price, is_spicy FROM dishes WHERE
-            price >= ? AND price <= ?';
+    try {
+        // build up the query 問い合わせsql文を制作
+        $sql = 'SELECT dish_name, price, is_spicy FROM dishes WHERE
+                price >= ? AND price <= ?';
 
-    // if a dish name was submitted, add to the WHERE clause
-    // we use quoteSmart() and strtr() to prevent user-enter wildcards from working
-    if (strlen(trim($_POST['dish_name']))) {
-        $dish = $db->quote($_POST['dish_name']);
-        $dish = strtr($dish, array('_' => '\_', '%' => '\%'));
-        //文字列の前後に％を追加
-        $dish = preg_replace('/^\'/', '\'%', $dish);
-        $dish = preg_replace('/\'$/', '%\'', $dish);
-        echo 'preg_replace()';
-        var_dump($dish);
-        $sql .= " AND dish_name LIKE $dish";
-    }
-
-    // if is_spicy is "yes" or "no", add appropriate SQL
-    // (if it's either, we don't need to add is_spicy to the WHERE clause)
-    $spicy_choice = $GLOBALS['spicy_choices'][ $_POST['is_spicy'] ];
-    if ($spicy_choice == 'yes') {
-        $sql .= ' AND is_spicy = 1';
-    } elseif ($spicy_choice == 'no') {
-        $sql .= ' AND is_spicy = 0';
-    }
-
-    // Send the query to the database program and get all the rows back
-
-    //original
-    // $dishes = $db->getAll($sql, array($_POST['min_price'],
-    //                                   $_POST['max_price']));
-
-    $sth = $db->prepare($sql);
-    $result = $sth->execute(array($_POST['min_price'], $_POST['max_price']));
-    $dishes = $result->fetchAll();
-
-
-    if (count($dishes) == 0) {
-        print 'No dishes matched.';
-    } else {
-        print '<table>';
-        print '<tr><th>Dish Name</th><th>Price</th><th>Spicy?</th></tr>';
-        foreach ($dishes as $dish) {
-            if ($dish->is_spicy == 1) {
-                $spicy = 'Yes(1)';
-            } else {
-                $spicy = 'No(0)';
-            }
-            printf('<tr><td>%s</td><td>$%.02f</td><td>%s</td></tr>',
-                   htmlentities($dish->dish_name), $dish->price, $spicy);
+        // if a dish name was submitted, add to the WHERE clause
+        // we use quote() and strtr() to prevent user-enter wildcards from working
+        if (strlen(trim($_POST['dish_name']))) {
+            $dish = $db->quote($_POST['dish_name']);
+            $dish = strtr($dish, array('_' => '\_', '%' => '\%'));
+            //文字列の前後に％を追加
+            $dish = preg_replace('/^\'/', '\'%', $dish);
+            $dish = preg_replace('/\'$/', '%\'', $dish);
+            echo 'preg_replace()';
+            var_dump($dish);
+            $sql .= " AND dish_name LIKE $dish";
         }
+
+        // if is_spicy is "yes" or "no", add appropriate SQL
+        // (if it's either, we don't need to add is_spicy to the WHERE clause)
+        $spicy_choice = $GLOBALS['spicy_choices'][ $_POST['is_spicy'] ];
+        if ($spicy_choice == 'yes') {
+            $sql .= ' AND is_spicy = 1';
+        } elseif ($spicy_choice == 'no') {
+            $sql .= ' AND is_spicy = 0';
+        }
+
+        // Send the query to the database program and get all the rows back
+
+        //original
+        // $sth = $db->prepare($sql);
+        // $result = $sth->execute(array($_POST['min_price'], $_POST['max_price']));
+        // $dishes = $result->fetchAll();
+
+
+        //prepared quary
+        $sth = $db->prepare($sql);
+        $sth->execute(array($_POST['min_price'], $_POST['max_price']));
+        //フェッチモードをオブジェクトに設定
+        $sth->setFetchMode(PDO::FETCH_OBJ);
+        //結果の習得
+        $dishes = $sth->fetchAll();
+
+
+
+        if (count($dishes) == 0) {
+            print 'No dishes matched.';
+        } else {
+            print '<table>';
+            print '<tr><th>Dish Name</th><th>Price</th><th>Spicy?</th></tr>';
+            foreach ($dishes as $dish) {
+                if ($dish->is_spicy == 1) {
+                    $spicy = 'Yes(1)';
+                } else {
+                    $spicy = 'No(0)';
+                }
+                printf('<tr><td>%s</td><td>$%.02f</td><td>%s</td></tr>',
+                       htmlentities($dish->dish_name), $dish->price, $spicy);
+            }
+        }
+    } catch (PDOexception $e) {
+      var_dump($e);
     }
 }
 ?>
